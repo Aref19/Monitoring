@@ -1,0 +1,180 @@
+version: "3.8"
+  #services
+services:
+  eureka-discovery:
+    build:
+      context: ../eurkadiscovery
+      dockerfile: Dockerfile
+    container_name: eureka-discovery
+    ports:
+      - "9090:9090"
+    networks:
+      - microservice-network
+
+  api-gateway:
+    build:
+      context: ../ApiGateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "6060:6060"
+    depends_on:
+      - eureka-discovery
+      - delivery-service
+      - user-service
+      - tracing-service
+      - driver-service
+    environment:
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-discovery:9090/eureka
+      - OTEL_SERVICE_NAME=apiGateway
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://host.docker.internal:4317  # Direkt gesetzt
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRIC_EXPORT_INTERVAL=2000 
+    networks:
+      - microservice-network
+
+  user-service:
+    build:
+      context: ../user_service
+      dockerfile: Dockerfile
+    container_name: user-service
+    environment:
+      - SPRING_APPLICATION_NAME=userservice
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql_userservicess:3306/User_Database
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-discovery:9090/eureka
+      - OTEL_SERVICE_NAME=userservice
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://host.docker.internal:4317  # Direkt gesetzt
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRIC_EXPORT_INTERVAL=2000 
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-discovery
+      - mysql_userservicess
+      - delivery-service
+      
+    networks:
+      - microservice-network
+
+  delivery-service:
+    build:
+      context: ../deliveryservice
+      dockerfile: Dockerfile
+    container_name: delivery-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql_deliveryservice:3306/deliverydb
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-discovery:9090/eureka  
+      - OTEL_SERVICE_NAME=deliveryservice
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://host.docker.internal:4317  # Direkt gesetzt
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRIC_EXPORT_INTERVAL=2000 
+    ports:
+      - "9098:9098"
+    depends_on:
+      -  eureka-discovery
+      -  mysql_deliveryservice
+      -  driver-service
+    networks:
+      - microservice-network
+
+  driver-service:
+    build:
+      context: ../driverservice
+      dockerfile: Dockerfile
+    container_name: driver-service
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql_driverservice:3306/driverdb
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-discovery:9090/eureka
+      - OTEL_SERVICE_NAME=driverservice
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://host.docker.internal:4317  
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRIC_EXPORT_INTERVAL=2000 
+    ports:
+      - "9099:9099"
+    depends_on:
+      - mysql_driverservice
+      - eureka-discovery
+      - tracing-service
+      
+    networks:
+      - microservice-network
+
+  tracing-service:
+    build:
+      context: ../tracingservice
+      dockerfile: Dockerfile
+    container_name: tracing-service
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis_tracing
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=123456
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-discovery:9090/eureka
+      - OTEL_SERVICE_NAME=tracingservice
+      - OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://host.docker.internal:4317
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://host.docker.internal:4317  # Direkt gesetzt
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_METRIC_EXPORT_INTERVAL=2000 
+    ports:
+      - "9092:9092"
+    depends_on:
+      - redis_tracing
+      - eureka-discovery
+      
+    networks:
+      - microservice-network
+  
+
+  #datenbank
+  mysql_userservicess:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: User_Database      
+    ports:
+      - "3306:3306"
+    networks:
+      - microservice-network
+  mysql_deliveryservice:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: deliverydb
+    ports:
+      - "3307:3306"
+    networks:
+      - microservice-network
+
+  mysql_driverservice:
+    image: mysql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: driverdb
+    ports:
+      - "3308:3306"
+    networks:
+      - microservice-network
+  
+  redis_tracing:
+    image: redis:latest
+    container_name: redis_tracing 
+    environment:
+      - REDIS_PASSWORD=123456
+      - REDIS_PORT=6379
+      - REDIS_DATABASES=16
+    ports:
+      - "6379:6379" # Host port:Container port
+    command: ["redis-server", "--requirepass", "123456"]
+    networks:
+      - microservice-network
+networks:
+  microservice-network:
+    driver: bridge

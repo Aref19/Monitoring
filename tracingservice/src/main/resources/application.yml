@@ -1,0 +1,55 @@
+spring:
+  application:
+    name: tracingservice
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 123456
+server:
+  port: 9092
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:9090/eureka/
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+
+otel:
+  exporter:
+    otlp:
+      logs:
+        endpoint: http://localhost:4317
+      metrics:
+        endpoint: http://localhost:4317
+      traces:
+        endpoint: http://localhost:4317
+      protocol: grpc
+  metric:
+    export:
+      interval: 2000
+
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    io.opentelemetry: DEBUG
+    io.opentelemetry.exporter: DEBUG
+    io.opentelemetry.sdk.trace: DEBUG
+    io.opentelemetry.context: DEBUG
+    com.netflix.eureka: ERROR
+    com.netflix.discovery: ERROR

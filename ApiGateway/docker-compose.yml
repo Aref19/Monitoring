@@ -1,0 +1,21 @@
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+
+  otel-collector:
+    image: chainguard/opentelemetry-collector:latest
+    container_name: otel-collector
+    ports:
+      - "4317:4317"  # OTLP (gRPC) receiver for traces/metrics
+      - "9464:9464"  # Prometheus scrape endpoint
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml  # Mount the config file
+    command:
+      - "--config=/etc/otel-collector-config.yaml"
+    restart: always

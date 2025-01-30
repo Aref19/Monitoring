@@ -1,0 +1,96 @@
+spring:
+  application:
+    name: userservice
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      connect-timeout: 6379
+      password: mysecretpassword
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/User_Database
+    username: root
+    password: 123456
+
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+
+
+
+otel:
+  service:
+    name: ${spring.application.name}
+  exporter:
+    otlp:
+      logs:
+        endpoint: http://localhost:4317
+      metrics:
+        endpoint: http://localhost:4317
+      traces:
+        endpoint: http://localhost:4317
+      protocol: grpc
+  metric:
+    export:
+      interval: 2000
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+  tracing:
+    sampling:
+      probability: 1.0
+    enabled: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        "[http.server.requests]": 50, 100, 200, 500, 1000
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        pushgateway:
+          enabled: true
+          job: ${spring.application.name}
+          push-rate: 1m
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:9090/eureka/
+
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}] "
+
+  level:
+    io.opentelemetry: DEBUG
+    io.opentelemetry.exporter: DEBUG
+    io.opentelemetry.sdk.trace: DEBUG
+    io.opentelemetry.context: DEBUG
+    com.netflix.eureka: ERROR
+    com.netflix.discovery: ERROR
+    org.springframework.cloud.gateway: DEBUG
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost

@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: deliveryservice
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  datasource:
+    url: jdbc:mysql://localhost:3307/Delivery
+    username: root
+    password: 123456
+
+otel:
+  exporter:
+    otlp:
+      logs:
+        endpoint: http://localhost:4317
+      metrics:
+        endpoint: http://localhost:4317
+      traces:
+        endpoint: http://localhost:4317
+      protocol: grpc
+  metric:
+    export:
+      interval: 2000
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://localhost:9090/eureka/
+server:
+  port: 9098
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+  level:
+    io.opentelemetry: DEBUG
+    io.opentelemetry.exporter: DEBUG
+    io.opentelemetry.sdk.trace: DEBUG
+    io.opentelemetry.context: DEBUG
+    com.netflix.eureka: ERROR
+    com.netflix.discovery: ERROR
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+
